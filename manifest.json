@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Blockchain Address Mapper",
+  "version": "1.0",
+  "description": "Tự động mapping blockchain addresses với tên thân thiện từ file CSV",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.arbiscan.io/*",
+    "*://*.etherscan.io/*",
+    "*://*.bscscan.com/*",
+    "*://*.polygonscan.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.arbiscan.io/*",
+        "*://*.etherscan.io/*",
+        "*://*.bscscan.com/*",
+        "*://*.polygonscan.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Address Mapper"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
