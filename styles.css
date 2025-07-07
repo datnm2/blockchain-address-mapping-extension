@@ -14,6 +14,7 @@
     white-space: nowrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: all 0.2s ease;
+    font-size: x-small;
 }
 
 .address-label:hover {
@@ -90,9 +91,14 @@
     }
 }
 
-/* Tooltip improvements */
-.address-label[title]:hover::after,
-.address-mapped[title]:hover::after {
+/* Custom tooltip that shows original address */
+.address-label,
+.address-mapped {
+    position: relative;
+}
+
+.address-label:hover::before,
+.address-mapped:hover::before {
     content: attr(title);
     position: absolute;
     bottom: 100%;
@@ -108,6 +114,22 @@
     margin-bottom: 5px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     animation: fadeInScale 0.2s ease-out;
+    pointer-events: none;
+}
+
+/* Arrow for tooltip */
+.address-label:hover::after,
+.address-mapped:hover::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+    z-index: 1001;
+    margin-bottom: 1px;
+    pointer-events: none;
 }
 
 /* Integration with popular blockchain explorers */

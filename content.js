@@ -1,230 +1,231 @@
-// Content script for blockchain address mapping
-class AddressMapper {
-    constructor() {
-        this.addressMap = {};
-        this.settings = {
-            enabled: true,
-            replaceMode: false
-        };
-        this.processed = new Set();
-        this.init();
-    }
+// Prevent double declaration of AddressMapper
+if (!window.__AddressMapperLoaded) {
+    window.__AddressMapperLoaded = true;
 
-    async init() {
-        await this.loadData();
-        if (this.settings.enabled) {
-            this.startMapping();
+    // Content script for blockchain address mapping
+    class AddressMapper {
+        constructor() {
+            this.addressMap = {};
+            this.settings = {
+                enabled: true,
+                replaceMode: false,
+                debug: false
+            };
+            this.processed = new Set();
+            this.mappedAdresses = new Set();
+            this.mappingTimeout = null;
+            this.intervalId = null;
+            this.init();
         }
-    }
 
-    async loadData() {
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['addressMap', 'settings'], (result) => {
-                this.addressMap = result.addressMap || {};
-                this.settings = {
-                    enabled: result.settings?.enabled !== false,
-                    replaceMode: result.settings?.replaceMode || false
-                };
-                resolve();
+        async init() {
+            await this.loadData();
+            if (this.settings.enabled) {
+                this.log('Extension enabled, starting mapping...');
+                this.log(`Loaded ${Object.keys(this.addressMap).length} addresses`);
+                this.startMapping();
+            } else {
+                this.log('Extension disabled');
+            }
+        }
+
+        log(message) {
+            if (this.settings.debug) {
+                console.log(`[AddressMapper] ${message}`);
+            }
+        }
+
+        async loadData() {
+            return new Promise((resolve) => {
+                chrome.storage.local.get(['addressMap', 'settings'], (result) => {
+                    this.addressMap = result.addressMap || {};
+                    this.settings = {
+                        enabled: result.settings?.enabled !== false,
+                        replaceMode: result.settings?.replaceMode || false,
+                        debug: result.settings?.debug || false
+                    };
+
+                    this.log(`Settings loaded: ${JSON.stringify(this.settings)}`);
+                    resolve();
+                });
             });
-        });
-    }
+        }
 
-    startMapping() {
-        // Initial mapping
-        this.mapAddresses();
-        
-        // Watch for dynamic content changes
-        const observer = new MutationObserver((mutations) => {
-            let shouldProcess = false;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    shouldProcess = true;
+        startMapping() {
+            // Initial mapping with delay to ensure page is loaded
+            setTimeout(() => this.mapAddresses(), 500);
+
+            // Watch for dynamic content changes
+            const observer = new MutationObserver((mutations) => {
+                let shouldProcess = false;
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        // Check if any added nodes contain addresses
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                const text = node.textContent || '';
+                                if (this.containsAddress(text)) {
+                                    shouldProcess = true;
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (shouldProcess) {
+                    // Debounce processing to avoid too many calls
+                    clearTimeout(this.mappingTimeout);
+                    this.mappingTimeout = setTimeout(() => this.mapAddresses(), 300);
                 }
             });
-            
-            if (shouldProcess) {
-                setTimeout(() => this.mapAddresses(), 100);
-            }
-        });
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
 
-        // Also check periodically for SPAs
-        setInterval(() => this.mapAddresses(), 2000);
-    }
+            // Also check periodically for SPAs and missed elements
+            this.intervalId = setInterval(() => {
+                this.mapAddresses();
+            }, 10000);
 
-    mapAddresses() {
-        // Common selectors for blockchain explorers
-        const selectors = [
-            'a[href*="/address/"]',
-            'a[href*="/tx/"]',
-            '.hash-tag',
-            '.text-monospace',
-            '[data-highlight-target]',
-            '.d-flex.align-items-center a',
-            'span[title*="0x"]',
-            'a[title*="0x"]',
-            '.text-truncate',
-            '.hash',
-            '.address'
-        ];
-
-        const elements = document.querySelectorAll(selectors.join(','));
-        
-        elements.forEach(element => {
-            this.processElement(element);
-        });
-
-        // Also process text nodes that might contain addresses
-        this.processTextNodes();
-    }
-
-    processElement(element) {
-        if (this.processed.has(element)) return;
-        
-        const text = element.textContent || element.innerText || '';
-        const href = element.href || '';
-        
-        // Extract address from text or href
-        let address = this.extractAddress(text) || this.extractAddress(href);
-        
-        if (address && this.addressMap[address.toLowerCase()]) {
-            this.addMapping(element, address);
-            this.processed.add(element);
+            // Listen for page navigation in SPAs
+            let lastUrl = location.href;
+            new MutationObserver(() => {
+                const url = location.href;
+                if (url !== lastUrl) {
+                    lastUrl = url;
+                    // Reset processed elements on navigation
+                    this.processed.clear();
+                    this.mappedAdresses.clear();
+                    setTimeout(() => this.mapAddresses(), 1000);
+                }
+            }).observe(document, { subtree: true, childList: true });
         }
-    }
 
-    processTextNodes() {
-        const walker = document.createTreeWalker(
-            document.body,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: (node) => {
-                    // Skip script and style nodes
-                    const parent = node.parentNode;
-                    if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    
-                    // Skip if already processed
-                    if (this.processed.has(parent)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    
-                    // Check if text contains address-like pattern
-                    const text = node.textContent;
-                    if (this.containsAddress(text)) {
-                        return NodeFilter.FILTER_ACCEPT;
-                    }
-                    
-                    return NodeFilter.FILTER_REJECT;
+        mapAddresses() {
+            console.log('Mapping addresses...');
+            // More specific selectors for blockchain explorers
+            const selectors = [
+                // Links with addresses
+                'a[href*="/address/0x"]',
+                'a[href*="/tx/0x"]',
+                'a[href*="/token/0x"]',
+
+                // Common classes
+                // '.hash-tag',
+                // '.text-monospace',
+                // '.font-monospace',
+                '[data-highlight-target]',
+                // '.text-truncate',
+                // '.hash',
+                // '.address',
+
+                // Any element with address-like content
+                '[title*="0x"]',
+                'span[data-original-title*="0x"]',
+
+                // General text elements that might contain addresses
+                'span:not(.address-label):not(.address-mapped)',
+                'div:not(.address-label):not(.address-mapped)',
+                'td:not(.address-label):not(.address-mapped)'
+            ];
+
+            // Process elements with specific selectors first
+            const elements = document.querySelectorAll(selectors.join(','));
+            elements.forEach(element => {
+                this.processElement(element);
+            });
+            console.log(`Processed ${elements.length} elements with addresses, labeled ${this.processed.size} elements.`)
+        }
+
+        processElement(element) {
+            if (this.processed.has(element)) return;
+
+            // Get text content
+            let text = element.textContent || element.innerText || '';
+            const href = element.href || '';
+
+            // Extract address from text or href or attribute
+            let address = this.extractAddress(text) || this.extractAddress(href) || this.extractAddress(element.getAttribute('data-highlight-target'));
+
+            if (address) {
+                const friendlyName = this.addressMap[address.toLowerCase()];
+                if (friendlyName) {
+                    this.addMapping(element, address, friendlyName);
+                    this.processed.add(element);
+                    return;
                 }
             }
-        );
-
-        let node;
-        while (node = walker.nextNode()) {
-            this.processTextNode(node);
-        }
-    }
-
-    processTextNode(textNode) {
-        const text = textNode.textContent;
-        const addresses = this.extractAllAddresses(text);
-        
-        if (addresses.length === 0) return;
-
-        let hasMapping = false;
-        for (const addr of addresses) {
-            if (this.addressMap[addr.toLowerCase()]) {
-                hasMapping = true;
-                break;
-            }
         }
 
-        if (hasMapping) {
-            this.addMappingToTextNode(textNode, addresses);
-            this.processed.add(textNode.parentNode);
-        }
-    }
+        addMapping(element, address, friendlyName) {
 
-    addMappingToTextNode(textNode, addresses) {
-        const parent = textNode.parentNode;
-        let html = textNode.textContent;
+            if (this.settings.replaceMode) {
+                // Replace the address completely
+                element.setAttribute('title', address);
+                element.classList.add('address-mapped');
 
-        addresses.forEach(address => {
-            const friendlyName = this.addressMap[address.toLowerCase()];
-            if (friendlyName) {
-                const regex = new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-                
-                if (this.settings.replaceMode) {
-                    html = html.replace(regex, `<span class="address-mapped" title="${address}">${friendlyName}</span>`);
+                // If it's a link, preserve the href
+
+                element.textContent = friendlyName;
+            } else {
+                // Always replace the text of <a> with mapping label, not just add label
+                if (element.tagName === 'A') {
+                    element.setAttribute('title', address);
+                    element.classList.add('address-mapped');
+                    element.innerHTML = `<span class="address-mapped">${friendlyName}</span>`;
                 } else {
-                    html = html.replace(regex, `<span class="address-with-label">${address} <span class="address-label" title="${address}">(${friendlyName})</span></span>`);
+                    // Add label next to address (giữ nguyên logic cũ cho các element khác)
+                    if (!element.querySelector('.address-label')) {
+                        element.classList.add('address-with-label');
+
+                        // Create label element
+                        const label = document.createElement('span');
+                        label.className = 'address-label';
+                        label.title = address;
+                        label.textContent = friendlyName;
+
+                        // Add label after the address text
+                        if (element.children.length === 0) {
+                            element.appendChild(document.createTextNode(' '));
+                            element.appendChild(label);
+                        } else {
+                            // For complex elements, add at the end
+                            element.appendChild(label);
+                        }
+                    }
                 }
             }
+        }
+
+        extractAddress(text) {
+            // Match Ethereum-style addresses (0x followed by 40 hex characters)
+            const match = text?.match(/0x[a-fA-F0-9]{40}/);
+            return match ? match[0] : null;
+        }
+
+        containsAddress(text) {
+            const flexibleShortenedAddressRegex = /^0x[0-9A-Fa-f]{6,10}\.{3}[0-9A-Fa-f]{6,10}$/;
+
+            return /0x[a-fA-F0-9]{40}/.test(text) || flexibleShortenedAddressRegex.test(text);
+        }
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            new AddressMapper();
         });
-
-        if (html !== textNode.textContent) {
-            const wrapper = document.createElement('span');
-            wrapper.innerHTML = html;
-            parent.replaceChild(wrapper, textNode);
-        }
-    }
-
-    addMapping(element, address) {
-        const friendlyName = this.addressMap[address.toLowerCase()];
-        
-        if (this.settings.replaceMode) {
-            // Replace the address completely
-            element.setAttribute('title', address);
-            element.innerHTML = `<span class="address-mapped">${friendlyName}</span>`;
-        } else {
-            // Add label next to address
-            if (!element.querySelector('.address-label')) {
-                const label = document.createElement('span');
-                label.className = 'address-label';
-                label.title = address;
-                label.textContent = ` (${friendlyName})`;
-                element.appendChild(label);
-                element.classList.add('address-with-label');
-            }
-        }
-    }
-
-    extractAddress(text) {
-        // Match Ethereum-style addresses (0x followed by 40 hex characters)
-        const match = text.match(/0x[a-fA-F0-9]{40}/);
-        return match ? match[0] : null;
-    }
-
-    extractAllAddresses(text) {
-        const matches = text.match(/0x[a-fA-F0-9]{40}/g);
-        return matches || [];
-    }
-
-    containsAddress(text) {
-        return /0x[a-fA-F0-9]{40}/.test(text);
-    }
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+    } else {
         new AddressMapper();
-    });
-} else {
-    new AddressMapper();
-}
-
-// Listen for storage changes
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && (changes.addressMap || changes.settings)) {
-        // Reload the page to apply new changes
-        window.location.reload();
     }
-});
+
+    // Listen for storage changes
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && (changes.addressMap || changes.settings)) {
+            // Reload the page to apply new changes
+            window.location.reload();
+        }
+    });
+}

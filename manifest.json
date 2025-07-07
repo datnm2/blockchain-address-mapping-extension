@@ -5,7 +5,11 @@
   "description": "Tự động mapping blockchain addresses với tên thân thiện từ file CSV",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs",
+    "scripting",
+    "notifications",
+    "contextMenus"
   ],
   "host_permissions": [
     "*://*.arbiscan.io/*",

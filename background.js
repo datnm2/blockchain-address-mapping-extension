@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener((details) => {
                 replaceMode: false
             }
         });
-        
+
         // Show welcome notification
         chrome.notifications.create({
             type: 'basic',
@@ -18,6 +18,7 @@ chrome.runtime.onInstalled.addListener((details) => {
             message: 'Click vào icon extension để import file CSV và bắt đầu mapping addresses.'
         });
     }
+
 });
 
 // Handle extension icon click
@@ -31,21 +32,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         const url = new URL(tab.url);
         const supportedDomains = [
             'arbiscan.io',
-            'etherscan.io', 
+            'etherscan.io',
             'bscscan.com',
             'polygonscan.com'
         ];
-        
-        const isSupported = supportedDomains.some(domain => 
+
+        const isSupported = supportedDomains.some(domain =>
             url.hostname.includes(domain)
         );
-        
+
         if (isSupported) {
             try {
                 // Check if extension is enabled
                 const result = await chrome.storage.local.get(['settings']);
                 const settings = result.settings || { enabled: true };
-                
+
                 if (settings.enabled) {
                     // Ensure content script is injected
                     await chrome.scripting.executeScript({
@@ -84,20 +85,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
 });
 
-// Context menu for quick actions
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.contextMenus.create({
-        id: 'copyAddress',
-        title: 'Copy original address',
-        contexts: ['selection']
-    });
-    
-    chrome.contextMenus.create({
-        id: 'addMapping',
-        title: 'Add to address mapping',
-        contexts: ['selection']
-    });
-});
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'copyAddress') {
@@ -125,14 +112,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true; // Keep message channel open
     }
-    
+
     if (request.type === 'SET_STORAGE') {
         chrome.storage.local.set(request.data, () => {
             sendResponse({ success: true });
         });
         return true;
     }
-    
+
     if (request.type === 'SHOW_NOTIFICATION') {
         chrome.notifications.create({
             type: 'basic',
@@ -155,9 +142,9 @@ chrome.storage.local.get(['addressMap'], (result) => {
 // Update badge when storage changes
 chrome.storage.onChanged.addListener((changes) => {
     if (changes.addressMap) {
-        const count = changes.addressMap.newValue ? 
+        const count = changes.addressMap.newValue ?
             Object.keys(changes.addressMap.newValue).length : 0;
-        
+
         if (count > 0) {
             chrome.action.setBadgeText({ text: count.toString() });
             chrome.action.setBadgeBackgroundColor({ color: '#007cba' });
@@ -166,3 +153,26 @@ chrome.storage.onChanged.addListener((changes) => {
         }
     }
 });
+
+
+// Always create context menus when service worker starts
+chrome.runtime.onStartup.addListener(() => {
+    createContextMenus();
+});
+createContextMenus();
+
+function createContextMenus() {
+    // Remove all first to avoid duplicates
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+            id: 'copyAddress',
+            title: 'Copy original address',
+            contexts: ['selection']
+        });
+        chrome.contextMenus.create({
+            id: 'addMapping',
+            title: 'Add to address mapping',
+            contexts: ['selection']
+        });
+    });
+}
