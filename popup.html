@@ -1,185 +1,44 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Address Mapper</title>
-    <style>
-        body {
-            width: 350px;
-            padding: 15px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 14px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        .section {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background: #f9f9f9;
-        }
-        .file-input {
-            width: 100%;
-            padding: 8px;
-            margin: 8px 0;
-            border: 2px dashed #ccc;
-            border-radius: 6px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .file-input:hover {
-            border-color: #007cba;
-            background-color: #f0f8ff;
-        }
-        .file-input input {
-            display: none;
-        }
-        button {
-            background: #007cba;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            margin: 5px 0;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background: #005a8a;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .toggle-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 10px 0;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #007cba;
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .status {
-            padding: 8px;
-            border-radius: 4px;
-            margin: 8px 0;
-            text-align: center;
-            font-size: 12px;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .count {
-            font-weight: bold;
-            color: #007cba;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Name Replacer</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-    <div class="header">
-        <h2>🏷️ Address Mapper</h2>
-        <p>Mapping blockchain addresses với tên thân thiện</p>
-    </div>
-
+  <div class="container">
+    <h2>Wallet Name Manager</h2>
+    
+    <!-- CSV Import Section -->
     <div class="section">
-        <h3>📁 Import CSV File</h3>
-        <div class="file-input" onclick="document.getElementById('csvFile').click()">
-            <input type="file" id="csvFile" accept=".csv" />
-            <div>📄 Chọn file CSV hoặc kéo thả vào đây</div>
-            <small>Format: address,name</small>
-        </div>
-        <button id="loadCsv" disabled>Tải CSV</button>
-        <div id="csvStatus"></div>
+      <h3>Import CSV</h3>
+      <input type="file" id="csvFile" accept=".csv">
+      <button id="importBtn">Import</button>
+      <div id="importStatus"></div>
     </div>
 
+    <!-- Manual Add Section -->
     <div class="section">
-        <h3>⚙️ Cài đặt</h3>
-        
-        <div class="toggle-section">
-            <span>Thay thế địa chỉ hoàn toàn</span>
-            <label class="switch">
-                <input type="checkbox" id="replaceMode">
-                <span class="slider"></span>
-            </label>
-        </div>
-        
-        <div class="toggle-section">
-            <span>Bật extension</span>
-            <label class="switch">
-                <input type="checkbox" id="enableExtension" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="toggle-section">
-            <span>Debug mode (Console log)</span>
-            <label class="switch">
-                <input type="checkbox" id="debugMode">
-                <span class="slider"></span>
-            </label>
-        </div>
-        
-        <button id="saveSettings">💾 Lưu cài đặt</button>
+      <h3>Add Mapping</h3>
+      <input type="text" id="addressInput" placeholder="Wallet address (0x...)" />
+      <input type="text" id="nameInput" placeholder="Name" />
+      <button id="addBtn">Add</button>
     </div>
 
+    <!-- Current Mappings Section -->
     <div class="section">
-        <h3>📊 Thống kê</h3>
-        <p>Số địa chỉ đã mapping: <span class="count" id="addressCount">0</span></p>
-        <button id="clearData">🗑️ Xóa tất cả dữ liệu</button>
-        <button id="refreshPage">🔄 Refresh trang hiện tại</button>
+      <h3>Current Mappings</h3>
+      <div id="mappingsList"></div>
     </div>
 
-    <script src="popup.js"></script>
+    <!-- Control Buttons -->
+    <div class="controls">
+      <button id="toggleBtn" class="toggle-btn">Enable/Disable</button>
+      <button id="clearBtn" class="clear-btn">Clear All</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
 </body>
 </html>

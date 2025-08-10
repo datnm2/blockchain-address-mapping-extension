@@ -1,40 +1,34 @@
 {
   "manifest_version": 3,
-  "name": "Blockchain Address Mapper",
-  "version": "1.0",
-  "description": "Tự động mapping blockchain addresses với tên thân thiện từ file CSV",
+  "name": "Wallet Name Replacer",
+  "version": "1.0.0",
+  "description": "Replace wallet addresses with custom names on blockchain explorers",
   "permissions": [
     "storage",
-    "activeTab",
-    "tabs",
-    "scripting",
-    "notifications",
-    "contextMenus"
+    "activeTab"
   ],
   "host_permissions": [
-    "*://*.arbiscan.io/*",
     "*://*.etherscan.io/*",
+    "*://*.arbiscan.io/*",
     "*://*.bscscan.com/*",
-    "*://*.polygonscan.com/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.arbiscan.io/*",
-        "*://*.etherscan.io/*",
-        "*://*.bscscan.com/*",
-        "*://*.polygonscan.com/*"
-      ],
-      "js": ["content.js"],
-      "css": ["styles.css"],
-      "run_at": "document_end"
-    }
+    "*://*.polygonscan.com/*",
+    "*://*.optimistic.etherscan.io/*"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Address Mapper"
+    "default_title": "Wallet Name Replacer"
   },
-  "background": {
-    "service_worker": "background.js"
-  }
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.etherscan.io/*",
+        "*://*.arbiscan.io/*",
+        "*://*.bscscan.com/*",
+        "*://*.polygonscan.com/*",
+        "*://*.optimistic.etherscan.io/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

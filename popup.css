@@ -1,0 +1,129 @@
+body {
+  width: 400px;
+  min-height: 500px;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f5f5;
+}
+
+.container {
+  padding: 15px;
+}
+
+h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 18px;
+  text-align: center;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 10px;
+}
+
+h3 {
+  margin: 15px 0 10px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.section {
+  background: white;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+input[type="file"] {
+  margin: 5px 0;
+}
+
+button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 5px 5px 5px 0;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #45a049;
+}
+
+.clear-btn {
+  background: #f44336;
+}
+
+.clear-btn:hover {
+  background: #da190b;
+}
+
+.toggle-btn {
+  background: #2196F3;
+}
+
+.toggle-btn:hover {
+  background: #0b7dda;
+}
+
+#mappingsList {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 5px;
+}
+
+.mapping-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px;
+  margin: 2px 0;
+  background: #f9f9f9;
+  border-radius: 3px;
+}
+
+.mapping-address {
+  font-family: monospace;
+  font-size: 11px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.mapping-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.delete-btn {
+  background: #ff5252;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+#importStatus {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #4CAF50;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
